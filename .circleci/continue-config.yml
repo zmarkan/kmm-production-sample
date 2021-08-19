@@ -1,0 +1,76 @@
+version: 2.1
+
+orbs:
+  android: circleci/android@1.0.3
+
+parameters:
+  build-all:
+    type: boolean
+    default: false
+  build-android:
+    type: boolean
+    default: false
+  build-ios:
+    type: boolean
+    default: false
+
+jobs:
+  build-android:
+    executor: android/android
+
+    steps:
+      - checkout
+      - android/restore-build-cache
+      - android/restore-gradle-cache
+      - run:
+          name: Build Android app
+          command: ./gradlew androidApp:assembleDebug
+      - android/save-gradle-cache
+      - android/save-build-cache
+
+      - store_artifacts:
+          path: androidApp/build/outputs/apk/debug
+
+  build-ios:
+    macos:
+      xcode: 12.4.0
+    steps:
+      - checkout
+      - run:
+          name: Allow proper XCode dependency resolution
+          command: |
+            sudo defaults write com.apple.dt.Xcode IDEPackageSupportUseBuiltinSCM YES
+            rm ~/.ssh/id_rsa || true
+            for ip in $(dig @8.8.8.8 bitbucket.org +short); do ssh-keyscan bitbucket.org,$ip; ssh-keyscan $ip; done 2>/dev/null >> ~/.ssh/known_hosts || true
+            for ip in $(dig @8.8.8.8 github.com +short); do ssh-keyscan github.com,$ip; ssh-keyscan $ip; done 2>/dev/null >> ~/.ssh/known_hosts || true
+      - run:
+          name: Install Gem dependencies
+          command: |
+            cd iosApp
+            bundle install
+      - run:
+          name: Fastlane Tests
+          command: |
+            cd iosApp
+            fastlane scan
+      - store_artifacts:
+          path: iosApp/fastlane/test_output
+      - store_test_results:
+          path: iosApp/fastlane/test_output/report.junit
+
+workflows:
+  run-android:
+    when:
+      or:
+        - << pipeline.parameters.build-android >>
+        - << pipeline.parameters.build-all >>
+    jobs:
+      - build-android
+
+  run-ios:
+    when:
+      or:
+        - << pipeline.parameters.build-ios >>
+        - << pipeline.parameters.build-all >>
+    jobs:
+      - build-ios
