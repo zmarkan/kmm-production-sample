@@ -23,13 +23,10 @@ jobs:
       - android/restore-build-cache
       - android/restore-gradle-cache
       - run:
-          name: Build Android app
-          command: ./gradlew androidApp:assembleDebug
+          name: Run Android tests
+          command: ./gradlew androidApp:testDebugUnitTest
       - android/save-gradle-cache
       - android/save-build-cache
-
-      - store_artifacts:
-          path: androidApp/build/outputs/apk/debug
 
   build-ios:
     macos:
@@ -53,10 +50,6 @@ jobs:
           command: |
             cd iosApp
             fastlane scan
-      - store_artifacts:
-          path: iosApp/fastlane/test_output
-      - store_test_results:
-          path: iosApp/fastlane/test_output/report.junit
 
 workflows:
   run-android:
