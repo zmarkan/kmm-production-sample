@@ -85,4 +85,3 @@ public struct StoreConnector<V: View>: View {
         return content(store.state, store.dispatch)
     }
 }
-
